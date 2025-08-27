@@ -1,5 +1,4 @@
 package com.brazza.servlet;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -26,41 +25,36 @@ public class InscriptionServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String prenom = request.getParameter("prenom"); 
+        String prenom = request.getParameter("prenom");
         String nom = request.getParameter("nom");
         String email = request.getParameter("email");
         String motdepasse = request.getParameter("motdepasse");
         String confirmMotdepasse = request.getParameter("confirmMotdepasse");
         String telephone = request.getParameter("telephone");
+        String dateNaissance = request.getParameter("dateNaissance");
+        String genre = request.getParameter("genre");
 
         if (!motdepasse.equals(confirmMotdepasse)) {
             response.sendRedirect("forminscription.jsp?error=password");
             return;
         }
 
-        // Hash du mot de passe
         String hashedPassword = hashPassword(motdepasse);
 
-        // Définir le rôle par défaut
+        // Rôle par défaut
         String role = "user";
-
-        // Tableau des emails qui doivent être admins
         String[] admins = {"japhetikoume@gmail.com"};
-
-        // Tableau des emails spéciaux avec rôle prédéfini (ex: rester membre)
         String[] membresSpeciaux = {"ikoumejaphet@gmail.com"};
 
-        // Vérification si l'email est un admin
-        for(String adminEmail : admins) {
-            if(email.equalsIgnoreCase(adminEmail)) {
+        for (String adminEmail : admins) {
+            if (email.equalsIgnoreCase(adminEmail)) {
                 role = "admin";
                 break;
             }
         }
 
-        // Vérification si l'email doit rester membre malgré tout
-        for(String membreEmail : membresSpeciaux) {
-            if(email.equalsIgnoreCase(membreEmail)) {
+        for (String membreEmail : membresSpeciaux) {
+            if (email.equalsIgnoreCase(membreEmail)) {
                 role = "membre";
                 break;
             }
@@ -68,46 +62,40 @@ public class InscriptionServlet extends HttpServlet {
 
         response.setContentType("text/html;charset=UTF-8");
         try (PrintWriter out = response.getWriter()) {
-            try {
-                Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
 
-                try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD_DB);
-                     PreparedStatement stmt = conn.prepareStatement(
-                             "INSERT INTO utilisateurs (nom, prenom, role ,  email, motdepasse, telephone) VALUES (?, ?, ?, ?, ?, ?)")) {
+            try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD_DB);
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO utilisateurs (nom, prenom, motdepasse, telephone, date_naissance, email, genre, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
 
-                   
-                    stmt.setString(1, nom);
-                    stmt.setString(2, prenom);
-                    stmt.setString(3, role); // ajouter le rôle
-                    stmt.setString(4, email);
-                    stmt.setString(5, hashedPassword);
-                    stmt.setString(6, telephone);
-                  
+                stmt.setString(1, nom);
+                stmt.setString(2, prenom);
+                stmt.setString(3, hashedPassword);
+                stmt.setString(4, telephone);
+                stmt.setString(5, dateNaissance);
+                stmt.setString(6, email);
+                stmt.setString(7, genre);
+                stmt.setString(8, role);
 
-                    int rows = stmt.executeUpdate();
+                int rows = stmt.executeUpdate();
 
-                    if (rows > 0) {
-                        // Création de la session après inscription réussie
-                        HttpSession session = request.getSession();
-                        session.setAttribute("userPrenom", prenom);
-                        session.setAttribute("userNom", nom);
-                        session.setAttribute("userEmail", email);
-                        session.setAttribute("userRole", role); // ajouter rôle dans la session
+                if (rows > 0) {
+                    HttpSession session = request.getSession();
+                    session.setAttribute("userPrenom", prenom);
+                    session.setAttribute("userNom", nom);
+                    session.setAttribute("userEmail", email);
+                    session.setAttribute("userRole", role);
 
-                        response.sendRedirect("confirmation.jsp");
-                    } else {
-                        out.println("<h2>Erreur : impossible d'insérer l'utilisateur.</h2>");
-                        out.println("<a href='forminscription.jsp'>Retour</a>");
-                    }
+                    // Redirection corrigée vers le servlet qui affiche le wiki
+                    response.sendRedirect(request.getContextPath() + "/code_jsp/index.jsp");
+                } else {
+                    out.println("<h2>Erreur : impossible d'insérer l'utilisateur.</h2>");
+                    out.println("<a href='forminscription.jsp'>Retour</a>");
                 }
-
-            } catch (Exception e) {
-                out.println("<h2>Erreur SQL :</h2>");
-                out.println("<pre>" + e.getMessage() + "</pre>");
-                out.println("<a href='forminscription.jsp'>Retour</a>");
-                e.printStackTrace();
             }
 
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

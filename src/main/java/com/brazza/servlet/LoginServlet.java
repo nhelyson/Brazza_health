@@ -26,7 +26,6 @@ public class LoginServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Récupère le champ identifiant (nom ou email)
         String login = request.getParameter("identifiant");
         String motdepasse = request.getParameter("motdepasse");
 
@@ -36,22 +35,25 @@ public class LoginServlet extends HttpServlet {
             Class.forName("com.mysql.cj.jdbc.Driver");
             try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD_DB);
                  PreparedStatement stmt = conn.prepareStatement(
-                         "SELECT * FROM utilisateurs WHERE (email=? OR nom=?) AND motdepasse=?")) {
+                         "SELECT id, nom, prenom, email, role FROM utilisateurs WHERE (email=? OR nom=?) AND motdepasse=?")) {
 
-                stmt.setString(1, login); // email
-                stmt.setString(2, login); // nom
+                stmt.setString(1, login);
+                stmt.setString(2, login);
                 stmt.setString(3, hashedPassword);
 
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
                     HttpSession session = request.getSession();
+
+                    session.setAttribute("userId", rs.getInt("id")); 
                     session.setAttribute("userNom", rs.getString("nom"));
                     session.setAttribute("userPrenom", rs.getString("prenom"));
                     session.setAttribute("userEmail", rs.getString("email"));
                     session.setAttribute("userRole", rs.getString("role"));
 
-                    response.sendRedirect(request.getContextPath() + "/confirmation.jsp");
+                    // Redirection corrigée vers le servlet qui affiche le wiki
+                    response.sendRedirect(request.getContextPath() + "/code_jsp/index.jsp");
                 } else {
                     response.sendRedirect(request.getContextPath() + "/connexion.jsp?error=invalid");
                 }
