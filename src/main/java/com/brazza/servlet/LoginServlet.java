@@ -14,7 +14,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
-@WebServlet("/loginServlet")
+@WebServlet("/Login")
 public class LoginServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -45,29 +45,33 @@ public class LoginServlet extends HttpServlet {
 
                 if (rs.next()) {
                     HttpSession session = request.getSession();
-
                     session.setAttribute("userId", rs.getInt("id")); 
                     session.setAttribute("userNom", rs.getString("nom"));
                     session.setAttribute("userPrenom", rs.getString("prenom"));
                     session.setAttribute("userEmail", rs.getString("email"));
                     session.setAttribute("userRole", rs.getString("role"));
 
-                    // Redirection corrigée vers le servlet qui affiche le wiki
-                    response.sendRedirect(request.getContextPath() + "/code_jsp/index.jsp");
+                    // Forward vers index.jsp dans WEB-INF
+                    request.getRequestDispatcher("/WEB-INF/code_jsp/index.jsp").forward(request, response);
+
                 } else {
-                    response.sendRedirect(request.getContextPath() + "/connexion.jsp?error=invalid");
+                    // Login échoué → forward vers connexion.jsp dans WEB-INF avec message
+                    request.setAttribute("error", "Identifiant ou mot de passe incorrect");
+                    request.getRequestDispatcher("/WEB-INF/code_jsp/connexion.jsp").forward(request, response);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect(request.getContextPath() + "/connexion.jsp?error=exception");
+            request.setAttribute("error", "Erreur serveur, réessayez plus tard");
+            request.getRequestDispatcher("/WEB-INF/code_jsp/connexion.jsp").forward(request, response);
         }
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        response.sendRedirect(request.getContextPath() + "/connexion.jsp");
+        // Forward vers connexion.jsp dans WEB-INF si l’URL est visitée directement
+        request.getRequestDispatcher("/WEB-INF/code_jsp/connexion.jsp").forward(request, response);
     }
 
     private String hashPassword(String password) {

@@ -1,4 +1,5 @@
 package com.brazza.servlet;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -7,13 +8,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
-@WebServlet("/inscriptionServlet")
+@WebServlet("/Inscription")
 public class InscriptionServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -60,13 +62,13 @@ public class InscriptionServlet extends HttpServlet {
             }
         }
 
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
+        try {
             Class.forName("com.mysql.cj.jdbc.Driver");
 
             try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD_DB);
                  PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT INTO utilisateurs (nom, prenom, motdepasse, telephone, date_naissance, email, genre, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
+                     "INSERT INTO utilisateurs (nom, prenom, motdepasse, telephone, date_naissance, email, genre, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                     Statement.RETURN_GENERATED_KEYS)) {
 
                 stmt.setString(1, nom);
                 stmt.setString(2, prenom);
@@ -80,17 +82,26 @@ public class InscriptionServlet extends HttpServlet {
                 int rows = stmt.executeUpdate();
 
                 if (rows > 0) {
+                    // Récupération de l'id généré
+                    ResultSet generatedKeys = stmt.getGeneratedKeys();
+                    int userId = 0;
+                    if (generatedKeys.next()) {
+                        userId = generatedKeys.getInt(1);
+                    }
+
+                    // Création de la session comme dans LoginServlet
                     HttpSession session = request.getSession();
-                    session.setAttribute("userPrenom", prenom);
+                    session.setAttribute("userId", userId);
                     session.setAttribute("userNom", nom);
+                    session.setAttribute("userPrenom", prenom);
                     session.setAttribute("userEmail", email);
                     session.setAttribute("userRole", role);
 
-                    // Redirection corrigée vers le servlet qui affiche le wiki
-                    response.sendRedirect(request.getContextPath() + "/code_jsp/index.jsp");
+                    // Forward vers index.jsp
+                    request.getRequestDispatcher("/WEB-INF/code_jsp/index.jsp").forward(request, response);
+
                 } else {
-                    out.println("<h2>Erreur : impossible d'insérer l'utilisateur.</h2>");
-                    out.println("<a href='forminscription.jsp'>Retour</a>");
+                    response.getWriter().println("<h2>Erreur : impossible d'insérer l'utilisateur.</h2>");
                 }
             }
 
